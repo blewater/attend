@@ -239,11 +239,11 @@ func (v Viber) Inquire(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				}
 			case 3:
-				if err := v.sendTextMsg("Είπατε Αμήν, Ο θεός να σας ευλογεί!", req.Sender.ID); err != nil {
+				if err := v.sendTextMsg("Είπατε Αμήν, μελετάτε καθημερινά την Αγία Γραφή και θα γευτείτε την ευλογία του Θεού!", req.Sender.ID); err != nil {
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				}
 			case 4:
-				if err := v.sendTextMsg("Είπατε Αμήν, Ο Χριστός θέλει και δύναται να σας ετοιμάσει να ζήσετε αιώνια μαζί του!", req.Sender.ID); err != nil {
+				if err := v.sendTextMsg("Είπατε Αμήν, ο Χριστός θέλει και δύναται να σας ετοιμάσει να ζήσετε αιώνια μαζί του!", req.Sender.ID); err != nil {
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				}
 			}
