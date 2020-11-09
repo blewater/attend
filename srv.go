@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
 	"github.com/blewater/attend/gcpfunc"
 	"github.com/joho/godotenv"
 )
@@ -29,6 +30,14 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	db, err := firebase.NewApp(context.Background(), nil)
+	if err != nil {
+		log.Fatalf("error initializing db: %v\n", err)
+	}
+
+	if db != nil {
+		fmt.Println("Db connection ok")
+	}
 	viberKey := os.Getenv(viberKifisiaKey)
 	workflow(logger, defaultHTTPPort, viberKey)
 	// ctx := context.Background()
