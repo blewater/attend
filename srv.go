@@ -22,6 +22,11 @@ const (
 	viberKifisiaKey          = "VIBER_BOT_KEY"
 )
 
+type app struct {
+	DB       *firebase.App
+	ViberKey string
+}
+
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -38,8 +43,13 @@ func main() {
 	if db != nil {
 		fmt.Println("Db connection ok")
 	}
+
 	viberKey := os.Getenv(viberKifisiaKey)
-	workflow(logger, defaultHTTPPort, viberKey)
+	app := &app{
+		DB:       db,
+		ViberKey: viberKey,
+	}
+	app.workflow(logger, defaultHTTPPort)
 	// ctx := context.Background()
 	// // if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", gcpfunc.HelloWorld); err != nil {
 	// // 	log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
@@ -58,17 +68,17 @@ func main() {
 }
 
 // Performs steps for launching the web server.
-func workflow(logger *log.Logger, port int, botKey string) {
-	httpServer := getHTTPServer(logger, port, botKey)
+func (a *app) workflow(logger *log.Logger, port int) {
+	httpServer := a.getHTTPServer(logger, port)
 
-	setupTerminateSignal(logger, httpServer, port)
+	a.setupTerminateSignal(logger, httpServer, port)
 
-	launchHTTPListener(logger, httpServer, port)
+	a.launchHTTPListener(logger, httpServer, port)
 }
 
 // getHTTPServer constructs an HTTP listening server with 2 request handlers
-func getHTTPServer(logger *log.Logger, port int, botKey string) *http.Server {
-	viber := gcpfunc.Viber{Key: botKey}
+func (a *app) getHTTPServer(logger *log.Logger, port int) *http.Server {
+	viber := gcpfunc.Viber{Key: a.ViberKey}
 
 	router := http.NewServeMux()
 
@@ -88,16 +98,16 @@ func getHTTPServer(logger *log.Logger, port int, botKey string) *http.Server {
 
 // setupTerminateSignal connects the os.Interrupt signal to a quit channel to
 // start teardown.
-func setupTerminateSignal(logger *log.Logger, httpServer *http.Server, port int) {
+func (a *app) setupTerminateSignal(logger *log.Logger, httpServer *http.Server, port int) {
 	quit := make(chan os.Signal, 1)
 
 	signal.Notify(quit, os.Interrupt)
 
-	go httpServerShutdown(logger, httpServer, port, quit)
+	go a.httpServerShutdown(logger, httpServer, port, quit)
 }
 
 // Final step in launching an http server: Start accepting requests.
-func launchHTTPListener(logger *log.Logger, httpServer *http.Server, port int) {
+func (a *app) launchHTTPListener(logger *log.Logger, httpServer *http.Server, port int) {
 	logger.Printf("Http server at container port %d listening...\n", port)
 
 	err := httpServer.ListenAndServe()
@@ -109,7 +119,7 @@ func launchHTTPListener(logger *log.Logger, httpServer *http.Server, port int) {
 
 // httpServerShutdown handles the termination signal by shutting down the http server
 // by closing connections and forcing shutdown if needed: "shutdownSecondsAllowance" max allowance.
-func httpServerShutdown(logger *log.Logger, httpServer *http.Server, port int, quit <-chan os.Signal) {
+func (a *app) httpServerShutdown(logger *log.Logger, httpServer *http.Server, port int, quit <-chan os.Signal) {
 	<-quit
 	logger.Printf("Http server at container port %d is shutting down...\n", port)
 
