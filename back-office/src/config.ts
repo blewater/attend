@@ -1,0 +1,1 @@
+export const appUrl:string = 'https://api.rem4you.com'
