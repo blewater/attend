@@ -213,8 +213,11 @@ func (v Viber) Inquire(w http.ResponseWriter, r *http.Request) {
 	switch req.Event {
 	case "webhook":
 		if err := json.NewEncoder(w).Encode(newRegResp()); err != nil {
-			log.Printf("web hook -> json.Encoder: %v\n", err)
+			log.Printf("web hook -> error: %v\n", err)
+			return
 		}
+		log.Println("Webhook registration success.")
+
 		return
 	case "message":
 		log.Printf("senderID: %s, SenderName: %s, Event: %s, Subscribed: %t, Timestamp: %d, MessageType: %s, "+
