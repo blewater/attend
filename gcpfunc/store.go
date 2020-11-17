@@ -4,11 +4,11 @@ import (
 	"context"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
+	"google.golang.org/api/iterator"
 )
 
 const (
@@ -28,7 +28,7 @@ type person struct {
 	ID          string    `firestore:"id,omitempty"`
 	First       string    `firestore:"first,omitempty"`
 	Last        string    `firestore:"last,omitempty"`
-	Subscribed  bool      `firestore:"subscribed,omitempty"`
+	Subscribed  bool      `firestore:"subscribed"`
 	PhoneNumber string    `firestore:"phoneNumber,omitempty"`
 	Type        string    `firestore:"type,omitempty"`
 	Updated     time.Time `firestore:"updated,omitempty"`
@@ -61,25 +61,31 @@ func NewStore() *CloudStore {
 	return fireStore
 }
 
-func (s *CloudStore) userToDB(v ViberRequest) {
-	u := v.Sender
-	if v.Sender == nil {
-		u = v.User
-		if u == nil {
+func (s *CloudStore) addUserIfNotExists(p *person) {
+	if p == nil {
+		return
+	}
+	church := s.db.Collection(root)
+	q := church.Where("id", "==", p.ID)
+	iter := q.Documents(context.Background())
+	defer iter.Stop()
+	doc, err := iter.Next()
+	if err != nil && err != iterator.Done {
+		log.Printf("Firestore addUserIfNotExists iter error: %s\n", err)
+		return
+	}
+	if doc != nil {
+		if dbPerson := doc.Data(); dbPerson != nil && dbPerson["id"] == p.ID {
 			return
 		}
 	}
-	names := strings.Split(u.Name, " ")
-	p := &person{
-		ID:         u.ID,
-		First:      names[0],
-		Last:       names[1],
-		Subscribed: v.Subscribed,
-		Updated:    time.Now().UTC(),
-	}
+	s.upsertPerson(church, p)
+}
+
+func (s *CloudStore) upsertPerson(church *firestore.CollectionRef, p *person) {
 	// upsert
-	_, err := s.db.Collection(root).Doc(personCol).Set(context.Background(), p)
+	_, err := church.Doc(personCol).Set(context.Background(), p)
 	if err != nil {
-		log.Printf("Firestore userToDB error has occurred: %s\n", err)
+		log.Printf("Firestore addUserIfNotExists error: %s\n", err)
 	}
 }

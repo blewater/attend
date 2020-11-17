@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 const (
@@ -46,8 +48,7 @@ func (v Viber) Inquire(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	go v.db.userToDB(req)
-
+	v.userToDB(req)
 	// Does not look its necessary for webhook callbacks
 	v.setToken(w.Header())
 
@@ -109,4 +110,25 @@ func (v Viber) Inquire(w http.ResponseWriter, r *http.Request) {
 
 func (v Viber) setToken(header http.Header) {
 	header.Add("X-Viber-Auth-Token", v.key)
+}
+
+func (v Viber) userToDB(req ViberRequest) {
+	u := req.Sender
+	if req.Sender == nil {
+		u = req.User
+		if u == nil {
+			return
+		}
+	}
+	names := strings.Split(u.Name, " ")
+	p := &person{
+		ID:         u.ID,
+		First:      names[0],
+		Last:       names[1],
+		Subscribed: req.Subscribed,
+		Updated:    time.Now().UTC(),
+	}
+
+	// no need to wait
+	go v.db.addUserIfNotExists(p)
 }
