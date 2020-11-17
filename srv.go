@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"time"
 
-	firebase "firebase.google.com/go/v4"
 	"github.com/blewater/attend/gcpfunc"
 	"github.com/joho/godotenv"
 )
@@ -23,7 +22,6 @@ const (
 )
 
 type app struct {
-	DB       *firebase.App
 	ViberKey string
 }
 
@@ -35,18 +33,8 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	db, err := firebase.NewApp(context.Background(), nil)
-	if err != nil {
-		log.Fatalf("error initializing db: %v\n", err)
-	}
-
-	if db != nil {
-		fmt.Println("Db connection ok")
-	}
-
 	viberKey := os.Getenv(viberKifisiaKey)
 	app := &app{
-		DB:       db,
 		ViberKey: viberKey,
 	}
 	app.workflow(logger, defaultHTTPPort)
@@ -78,7 +66,7 @@ func (a *app) workflow(logger *log.Logger, port int) {
 
 // getHTTPServer constructs an HTTP listening server with 2 request handlers
 func (a *app) getHTTPServer(logger *log.Logger, port int) *http.Server {
-	viber := gcpfunc.Viber{Key: a.ViberKey}
+	viber := gcpfunc.NewViberApp(a.ViberKey)
 
 	router := http.NewServeMux()
 
