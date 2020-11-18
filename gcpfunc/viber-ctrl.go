@@ -30,6 +30,64 @@ func NewViberApp(key string) Viber {
 	return v
 }
 
+func (v Viber) Meeting(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/meeting" {
+		http.Error(w, "404 not found.", http.StatusNotFound)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			errW := fmt.Sprintf("meeting parseform() err: %v", err)
+			log.Println(errW)
+			if _, fErr := fmt.Fprintf(w, errW); fErr != nil {
+				log.Println("fPrintf error:", fErr)
+			}
+		}
+
+		return
+	}
+	fmt.Printf("Post from website! r.PostFrom = %v\n", r.PostForm)
+	day, err := strconv.Atoi(r.FormValue("day"))
+	if err != nil {
+		dayErrStr := fmt.Sprintf("Bad day param:%s, error:%s", r.FormValue("day"), err)
+		_, _ = fmt.Fprintf(w, dayErrStr)
+		fmt.Println(dayErrStr)
+		return
+	}
+	minutes, err := strconv.Atoi(r.FormValue("minutes"))
+	if err != nil {
+		minutesErrStr := fmt.Sprintf("Bad minutes param:%s, error:%s", r.FormValue("minutes"), err)
+		_, _ = fmt.Fprintf(w, minutesErrStr)
+		fmt.Println(minutesErrStr)
+		return
+	}
+	count, err := strconv.Atoi(r.FormValue("count"))
+	if err != nil {
+		countErrStr := fmt.Sprintf("Bad count param:%s, error:%s", r.FormValue("count"), err)
+		_, _ = fmt.Fprintf(w, countErrStr)
+		fmt.Println(countErrStr)
+		return
+	}
+	timeVal, err := time.Parse(time.RFC3339, r.FormValue("time"))
+	if err != nil {
+		timeErrStr := fmt.Sprintf("Bad time param:%s, error:%s", r.FormValue("time"), err)
+		_, _ = fmt.Fprintf(w, timeErrStr)
+		fmt.Println(timeErrStr)
+		return
+	}
+	meeting := &meeting{
+		ID:      NewUuid(),
+		Day:     time.Weekday(day - 1),
+		Minutes: minutes,
+		Time:    timeVal,
+		Count:   count,
+		Created: time.Now().UTC(),
+	}
+
+	v.db.addMeetingIfNotExists(meeting)
+}
+
 // Inquire prints the JSON encoded "message" field in the body
 // of the request or "Hello, World!" if there isn't one.
 func (v Viber) Inquire(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +184,7 @@ func (v Viber) userToDB(req ViberRequest) {
 		First:      names[0],
 		Last:       names[1],
 		Subscribed: req.Subscribed,
-		Updated:    time.Now().UTC(),
+		Created:    time.Now().UTC(),
 	}
 
 	// no need to wait

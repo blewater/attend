@@ -2,13 +2,14 @@ package gcpfunc
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
-	"google.golang.org/api/iterator"
 )
 
 const (
@@ -26,18 +27,39 @@ func newFirebaseCfg() *firebase.Config {
 }
 
 type person struct {
-	ID          string    `firestore:"id,omitempty"`
-	First       string    `firestore:"first,omitempty"`
-	Last        string    `firestore:"last,omitempty"`
+	ID          string    `firestore:"id"`
+	First       string    `firestore:"first"`
+	Last        string    `firestore:"last"`
 	Subscribed  bool      `firestore:"subscribed"`
 	PhoneNumber string    `firestore:"phoneNumber"`
-	Type        string    `firestore:"type"`
-	Updated     time.Time `firestore:"updated,omitempty"`
+	Role        string    `firestore:"role"`
+	ExtraFamily int       `firestore:"extraFamily"`
+	Created     time.Time `firestore:"created"`
+}
+
+type meeting struct {
+	ID      string       `firestore:"id"`
+	Day     time.Weekday `firestore:"day"`
+	Minutes int          `firestore:"minutes"`
+	Time    time.Time    `firestore:"time"`
+	Count   int          `firestore:"count"`
+	Created time.Time    `firestore:"created"`
 }
 
 type CloudStore struct {
 	app *firebase.App
 	db  *firestore.Client
+}
+
+func NewUuid() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	uuid := fmt.Sprintf("%x-%x-%x-%x-%x",
+		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	return uuid
 }
 
 func NewStore() *CloudStore {
@@ -62,32 +84,35 @@ func NewStore() *CloudStore {
 	return fireStore
 }
 
+func (s *CloudStore) addMeetingIfNotExists(m *meeting) {
+	if m == nil {
+		return
+	}
+	meetingsCol := s.db.Collection(meetings)
+	meeting := meetingsCol.Doc(m.ID)
+	meetingRef, err := meeting.Get(context.Background())
+	if err != nil || !meetingRef.Exists() {
+		// s.upsertMeeting(meetingsCol, m)
+	}
+}
+
 func (s *CloudStore) addUserIfNotExists(p *person) {
 	if p == nil {
 		return
 	}
-	personsCol := s.db.Collection(users)
-	q := personsCol.Where("id", "==", p.ID)
-	iter := q.Documents(context.Background())
-	defer iter.Stop()
-	doc, err := iter.Next()
-	if err != nil && err != iterator.Done {
-		log.Printf("Firestore addUserIfNotExists iter error: %s\n", err)
-		return
+	usersCol := s.db.Collection(users)
+	user := usersCol.Doc(p.ID)
+	userRef, err := user.Get(context.Background())
+	if err != nil || !userRef.Exists() {
+		s.upsertUser(usersCol, p)
 	}
-	if doc != nil {
-		if dbPerson := doc.Data(); dbPerson != nil && dbPerson["id"] == p.ID {
-			return
-		}
-	}
-	s.upsertPerson(personsCol, p)
 }
 
-func (s *CloudStore) upsertPerson(personsCol *firestore.CollectionRef, p *person) {
+func (s *CloudStore) upsertUser(personsCol *firestore.CollectionRef, p *person) {
 	if p.ID == "" {
 		return
 	}
-	_, _, err := personsCol.Add(context.Background(), p)
+	_, err := personsCol.Doc(p.ID).Set(context.Background(), p)
 	if err != nil {
 		log.Printf("Firestore addUserIfNotExists error: %s\n", err)
 	}
