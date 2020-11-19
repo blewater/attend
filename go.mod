@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/firestore v1.3.0
 	cloud.google.com/go/storage v1.12.0 // indirect
 	firebase.google.com/go/v4 v4.1.0
+	github.com/google/uuid v1.1.2
 	github.com/joho/godotenv v1.3.0
 	golang.org/x/net v0.0.0-20201016165138-7b1cca2348c0 // indirect
 	golang.org/x/sys v0.0.0-20201118182958-a01c418693c7 // indirect

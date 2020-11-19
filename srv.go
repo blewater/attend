@@ -76,6 +76,8 @@ func (a *app) getHTTPServer(logger *log.Logger, port int) *http.Server {
 
 	router.HandleFunc("/meeting", viber.Meeting)
 
+	router.HandleFunc("/attendance", viber.Attendance)
+
 	// handler echoes the Path component of the request URL r.
 	router.HandleFunc("/", viber.Inquire) // each request calls handler
 

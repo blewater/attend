@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -28,6 +30,26 @@ func NewViberApp(key string) Viber {
 	}
 
 	return v
+}
+
+func (v Viber) Attendance(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/attendance" {
+		http.Error(w, "404 not found.", http.StatusNotFound)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			errW := fmt.Sprintf("attendance parseform() err: %v", err)
+			log.Println(errW)
+			if _, fErr := fmt.Fprintf(w, errW); fErr != nil {
+				log.Println("fPrintf error:", fErr)
+			}
+		}
+
+		return
+	}
+	fmt.Printf("Post from website! r.PostFrom = %v\n", r.PostForm)
 }
 
 func (v Viber) Meeting(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +99,7 @@ func (v Viber) Meeting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	meeting := &meeting{
-		ID:      NewUuid(),
+		ID:      uuid.New(),
 		Day:     time.Weekday(day - 1),
 		Minutes: minutes,
 		Time:    timeVal,

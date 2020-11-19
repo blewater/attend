@@ -10,12 +10,13 @@ import (
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
+	"github.com/google/uuid"
 )
 
 const (
-	users    = "users"
-	meetings = "meetings"
-	bookings = "bookings"
+	users       = "users"
+	meetings    = "meetings"
+	attendances = "attendances"
 )
 
 func newFirebaseCfg() *firebase.Config {
@@ -38,7 +39,7 @@ type person struct {
 }
 
 type meeting struct {
-	ID      string       `firestore:"id"`
+	ID      uuid.UUID    `firestore:"id"`
 	Day     time.Weekday `firestore:"day"`
 	Minutes int          `firestore:"minutes"`
 	Time    time.Time    `firestore:"time"`
@@ -84,12 +85,24 @@ func NewStore() *CloudStore {
 	return fireStore
 }
 
+func (s *CloudStore) addAttendanceIfNotExists(m *meeting) {
+	if m == nil {
+		return
+	}
+	attendancesCol := s.db.Collection(attendances)
+	attendance := attendancesCol.Doc(m.ID.String())
+	attendanceRef, err := attendance.Get(context.Background())
+	if err != nil || !attendanceRef.Exists() {
+		// s.upsertAttendance(meetingsCol, m)
+	}
+}
+
 func (s *CloudStore) addMeetingIfNotExists(m *meeting) {
 	if m == nil {
 		return
 	}
 	meetingsCol := s.db.Collection(meetings)
-	meeting := meetingsCol.Doc(m.ID)
+	meeting := meetingsCol.Doc(m.ID.String())
 	meetingRef, err := meeting.Get(context.Background())
 	if err != nil || !meetingRef.Exists() {
 		// s.upsertMeeting(meetingsCol, m)
